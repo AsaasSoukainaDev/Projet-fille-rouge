@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WebinairePro — Plateforme d'administration</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Transitions d'onglets */
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Scrollbar fine pour la sidebar */
+        .sidebar-scroll::-webkit-scrollbar { width: 4px; }
+        .sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
+        .sidebar-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+
+        /* Animation des lignes de tableau */
+        tbody tr { transition: background-color 0.1s ease; }
+
+        /* Focus ring global */
+        *:focus-visible { outline: none; }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans">
+<div class="flex h-screen overflow-hidden">
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         SIDEBAR
+    ════════════════════════════════════════════════════════════════════ -->
+    <aside class="w-64 bg-slate-900 flex flex-col shrink-0 h-screen sidebar-scroll overflow-y-auto">
+
+        <!-- Logo -->
+        <div class="h-16 flex items-center px-6 border-b border-slate-800 shrink-0">
+            <div class="flex items-center gap-3">
+                <!-- Icône micro -->
+                <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-white">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z"/>
+                    </svg>
+                </div>
+                <div>
+                    <p class="text-sm font-semibold text-white leading-tight">WebinairePro</p>
+                    <p class="text-xs text-slate-500">Admin</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="flex-1 px-3 py-5 flex flex-col gap-1">
+            <p class="px-3 mb-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">Navigation</p>
+
+            <!-- Lien Dashboard -->
+            <button
+                data-tab="dashboard"
+                onclick="changerOnglet('dashboard')"
+                id="nav-dashboard"
+                class="nav-link w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-colors text-left">
+                <!-- Icône grille -->
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 shrink-0">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"/>
+                </svg>
+                Tableau de bord
+            </button>
+
+            <!-- Lien Thèmes -->
+            <button
+                data-tab="themes"
+                onclick="changerOnglet('themes')"
+                id="nav-themes"
+                class="nav-link w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-colors text-left">
+                <!-- Icône tag -->
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 shrink-0">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6z"/>
+                </svg>
+                Thèmes
+                <span id="badge-themes" class="ml-auto bg-slate-700 text-slate-300 text-xs font-semibold px-1.5 py-0.5 rounded-full">0</span>
+            </button>
+
+            <!-- Lien Sessions -->
+            <button
+                data-tab="sessions"
+                onclick="changerOnglet('sessions')"
+                id="nav-sessions"
+                class="nav-link w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-colors text-left">
+                <!-- Icône calendrier -->
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 shrink-0">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/>
+                </svg>
+                Sessions
+                <span id="badge-sessions" class="ml-auto bg-slate-700 text-slate-300 text-xs font-semibold px-1.5 py-0.5 rounded-full">0</span>
+            </button>
+        </nav>
+
+        <!-- Pied de sidebar -->
+        <div class="px-3 py-4 border-t border-slate-800 shrink-0">
+            <div class="flex items-center gap-3 px-3 py-2">
+                <div class="w-7 h-7 rounded-full bg-indigo-600 flex items-center justify-center shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5 text-white">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0"/>
+                    </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-xs font-medium text-slate-300 truncate">Administrateur</p>
+                    <p class="text-xs text-slate-500">v1.0.0</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         COLONNE PRINCIPALE
+    ════════════════════════════════════════════════════════════════════ -->
+    <div class="flex-1 flex flex-col overflow-hidden">
+
+        <!-- HEADER -->
+        <header class="h-16 bg-white border-b border-slate-200 shadow-sm flex items-center justify-between px-6 shrink-0">
+            <div>
+                <h1 id="header-titre" class="text-lg font-semibold text-slate-900">Tableau de bord</h1>
+                <p id="header-sous-titre" class="text-xs text-slate-500">Vue d'ensemble de la plateforme</p>
+            </div>
+            <div class="flex items-center gap-4">
+                <span id="heure-courante" class="text-xs text-slate-400 hidden sm:block"></span>
+                <!-- Avatar -->
+                <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 text-indigo-600">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/>
+                    </svg>
+                </div>
+            </div>
+        </header>
+
+        <!-- CONTENU SCROLLABLE -->
+        <main class="flex-1 overflow-y-auto p-6 lg:p-8">
+
+            <!-- ─────────────────────────────────────────────────────────
+                 ONGLET : TABLEAU DE BORD
+            ──────────────────────────────────────────────────────────── -->
+            <section id="tab-dashboard" class="tab-content active">
+
+                <!-- Cartes statistiques -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+
+                    <!-- Total Thèmes -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <p class="text-sm font-medium text-slate-500">Total Thèmes</p>
+                            <div class="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-indigo-600">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <p id="stat-total-themes" class="text-3xl font-semibold text-slate-900">—</p>
+                    </div>
+
+                    <!-- Total Sessions -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <p class="text-sm font-medium text-slate-500">Total Sessions</p>
+                            <div class="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-blue-600">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <p id="stat-total-sessions" class="text-3xl font-semibold text-slate-900">—</p>
+                    </div>
+
+                    <!-- Sessions planifiées -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <p class="text-sm font-medium text-slate-500">Planifiées</p>
+                            <div class="w-10 h-10 rounded-lg bg-yellow-50 flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-yellow-600">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <p id="stat-planifiees" class="text-3xl font-semibold text-slate-900">—</p>
+                    </div>
+
+                    <!-- Sessions terminées -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <p class="text-sm font-medium text-slate-500">Terminées</p>
+                            <div class="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-green-600">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <p id="stat-terminees" class="text-3xl font-semibold text-slate-900">—</p>
+                    </div>
+                </div>
+
+                <!-- Tableau — Prochaines sessions -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+                        <h2 class="text-sm font-semibold text-slate-800">Prochaines sessions</h2>
+                        <button onclick="changerOnglet('sessions')" class="text-xs text-indigo-600 hover:text-indigo-700 font-medium transition-colors">
+                            Voir toutes →
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-slate-50 border-b border-slate-200">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Titre</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Date</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Durée</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Statut</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-dashboard" class="divide-y divide-slate-100">
+                                <tr>
+                                    <td colspan="4" class="px-6 py-10 text-center text-slate-400 text-sm">Chargement…</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ─────────────────────────────────────────────────────────
+                 ONGLET : THÈMES
+            ──────────────────────────────────────────────────────────── -->
+            <section id="tab-themes" class="tab-content">
+
+                <!-- Formulaire -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+                    <h2 id="form-theme-titre" class="text-base font-semibold text-slate-900 mb-5">Nouveau thème</h2>
+
+                    <form id="form-theme" novalidate>
+                        <input type="hidden" id="theme-id" />
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+                            <!-- Libellé -->
+                            <div>
+                                <label for="theme-libelle" class="block text-sm font-medium text-slate-700 mb-1">
+                                    Libellé <span class="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="text" id="theme-libelle" name="libelle" required
+                                    placeholder="Ex : Développement Web"
+                                    class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-shadow placeholder-slate-400" />
+                            </div>
+                            <!-- Description -->
+                            <div>
+                                <label for="theme-description" class="block text-sm font-medium text-slate-700 mb-1">
+                                    Description <span class="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="text" id="theme-description" name="description" required
+                                    placeholder="Brève description du thème…"
+                                    class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-shadow placeholder-slate-400" />
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-3">
+                            <button type="submit"
+                                id="btn-theme-submit"
+                                class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors">
+                                <!-- Icône +  -->
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+                                </svg>
+                                Créer le thème
+                            </button>
+                            <button type="button" id="btn-theme-annuler"
+                                class="hidden inline-flex items-center gap-2 px-4 py-2 bg-white text-slate-700 text-sm font-medium border border-slate-300 rounded-lg hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-300 transition-colors">
+                                Annuler
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Tableau des thèmes -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+                        <h2 class="text-sm font-semibold text-slate-800">
+                            Liste des thèmes
+                            <span id="compteur-themes" class="ml-2 bg-slate-100 text-slate-600 text-xs font-semibold px-2 py-0.5 rounded-full">0</span>
+                        </h2>
+                        <button onclick="chargerThemes()" class="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700 font-medium transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/>
+                            </svg>
+                            Rafraîchir
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-slate-50 border-b border-slate-200">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider w-16">ID</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Libellé</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Description</th>
+                                    <th class="px-6 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider w-28">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-themes" class="divide-y divide-slate-100">
+                                <tr>
+                                    <td colspan="4" class="px-6 py-10 text-center text-slate-400 text-sm">Chargement…</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ─────────────────────────────────────────────────────────
+                 ONGLET : SESSIONS
+            ──────────────────────────────────────────────────────────── -->
+            <section id="tab-sessions" class="tab-content">
+
+                <!-- Formulaire -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+                    <h2 id="form-session-titre" class="text-base font-semibold text-slate-900 mb-5">Nouvelle session</h2>
+
+                    <form id="form-session" novalidate>
+                        <input type="hidden" id="session-id" />
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-5">
+
+                            <!-- Titre -->
+                            <div class="xl:col-span-2">
+                                <label for="session-titre" class="block text-sm font-medium text-slate-700 mb-1">
+                                    Titre <span class="text-red-500">*</span>
+                                </label>
+                                <input type="text" id="session-titre" name="titre" required
+                                    placeholder="Ex : Introduction à Docker"
+                                    class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-shadow placeholder-slate-400" />
+                            </div>
+
+                            <!-- Thème -->
+                            <div>
+                                <label for="session-id-theme" class="block text-sm font-medium text-slate-700 mb-1">
+                                    Thème <span class="text-red-500">*</span>
+                                </label>
+                                <select id="session-id-theme" name="id_theme" required
+                                    class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-shadow">
+                                    <option value="">— Sélectionner —</option>
+                                </select>
+                            </div>
+
+                            <!-- Date -->
+                            <div>
+                                <label for="session-date" class="block text-sm font-medium text-slate-700 mb-1">
+                                    Date et heure <span class="text-red-500">*</span>
+                                </label>
+                                <input type="datetime-local" id="session-date" name="date_session" required
+                                    class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-shadow" />
+                            </div>
+
+                            <!-- Durée -->
+                            <div>
+                                <label for="session-duree" class="block text-sm font-medium text-slate-700 mb-1">
+                                    Durée (min) <span class="text-red-500">*</span>
+                                </label>
+                                <input type="number" id="session-duree" name="duree_minutes" required min="1" max="480"
+                                    placeholder="60"
+                                    class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-shadow placeholder-slate-400" />
+                            </div>
+
+                            <!-- Places max -->
+                            <div>
+                                <label for="session-places" class="block text-sm font-medium text-slate-700 mb-1">
+                                    Places max <span class="text-red-500">*</span>
+                                </label>
+                                <input type="number" id="session-places" name="places_max" required min="1" max="10000"
+                                    placeholder="100"
+                                    class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-shadow placeholder-slate-400" />
+                            </div>
+
+                            <!-- Lien de connexion -->
+                            <div class="md:col-span-2">
+                                <label for="session-lien" class="block text-sm font-medium text-slate-700 mb-1">
+                                    Lien de connexion <span class="text-red-500">*</span>
+                                </label>
+                                <input type="url" id="session-lien" name="lien_connexion" required
+                                    placeholder="https://meet.example.com/session"
+                                    class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-shadow placeholder-slate-400" />
+                            </div>
+
+                            <!-- Statut -->
+                            <div>
+                                <label for="session-statut" class="block text-sm font-medium text-slate-700 mb-1">
+                                    Statut <span class="text-red-500">*</span>
+                                </label>
+                                <select id="session-statut" name="statut" required
+                                    class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-shadow">
+                                    <option value="planifiée">Planifiée</option>
+                                    <option value="en cours">En cours</option>
+                                    <option value="terminée">Terminée</option>
+                                </select>
+                            </div>
+
+                            <!-- Description -->
+                            <div class="md:col-span-2 xl:col-span-3">
+                                <label for="session-description" class="block text-sm font-medium text-slate-700 mb-1">
+                                    Description <span class="text-red-500">*</span>
+                                </label>
+                                <textarea id="session-description" name="description" required rows="3"
+                                    placeholder="Description détaillée de la session…"
+                                    class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-shadow placeholder-slate-400 resize-none min-h-[80px]"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-3">
+                            <button type="submit" id="btn-session-submit"
+                                class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+                                </svg>
+                                Créer la session
+                            </button>
+                            <button type="button" id="btn-session-annuler"
+                                class="hidden inline-flex items-center gap-2 px-4 py-2 bg-white text-slate-700 text-sm font-medium border border-slate-300 rounded-lg hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-300 transition-colors">
+                                Annuler
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Tableau des sessions -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+                        <h2 class="text-sm font-semibold text-slate-800">
+                            Liste des sessions
+                            <span id="compteur-sessions" class="ml-2 bg-slate-100 text-slate-600 text-xs font-semibold px-2 py-0.5 rounded-full">0</span>
+                        </h2>
+                        <button onclick="chargerSessions()" class="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700 font-medium transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/>
+                            </svg>
+                            Rafraîchir
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-slate-50 border-b border-slate-200">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider w-12">ID</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Titre</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Date</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Durée</th>
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Statut</th>
+                                    <th class="px-6 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider w-28">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-sessions" class="divide-y divide-slate-100">
+                                <tr>
+                                    <td colspan="6" class="px-6 py-10 text-center text-slate-400 text-sm">Chargement…</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     ZONE TOASTS (fixe, coin supérieur droit)
+════════════════════════════════════════════════════════════════════ -->
+<div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     SCRIPTS (ordre important)
+════════════════════════════════════════════════════════════════════ -->
+<script src="./js/api.js"></script>
+<script src="./js/themes.js"></script>
+<script src="./js/sessions.js"></script>
+<script src="./js/app.js"></script>
+
+</body>
+</html>
