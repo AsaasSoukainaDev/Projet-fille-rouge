@@ -1,6 +1,3 @@
-# Diagramme de séquence — Réserver une session
-
-```mermaid
 sequenceDiagram
     autonumber
     actor P as 🎫 Participant
@@ -10,7 +7,7 @@ sequenceDiagram
     participant DAO as 💾 InscriptionDAO
     participant Visio as 📹 ServiceVisio
     participant Mail as 📧 ServiceEmail
-    database DB as 🗄️ Fichiers JSON
+    participant DB as 🗄️ Fichiers JSON
 
     Note over P,DB: Scénario complet : Réserver une session
 
@@ -110,4 +107,3 @@ sequenceDiagram
     deactivate Ctrl
     UI-->>P: afficher le planning à jour
     deactivate UI
-```
