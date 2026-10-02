@@ -1,3 +1,6 @@
+# Diagramme de séquence — Réserver une session
+
+```mermaid
 sequenceDiagram
     autonumber
     actor P as 🎫 Participant
