@@ -1,0 +1,35 @@
+/* style.css — Styles complémentaires à Tailwind CSS */
+
+/* Transitions globales sur les liens de navigation */
+.nav-link {
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+/* Animation de fade-in pour les lignes de tableau */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+#tbody-themes tr,
+#tbody-sessions tr {
+    animation: fadeIn 0.2s ease forwards;
+}
+
+/* Zone de notification */
+#zone-notification,
+#zone-notification-session {
+    transition: opacity 0.3s ease;
+}
+
+/* Scrollbar personnalisée pour la sidebar */
+.sidebar-scroll::-webkit-scrollbar {
+    width: 4px;
+}
+.sidebar-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+.sidebar-scroll::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.2);
+    border-radius: 2px;
+}
