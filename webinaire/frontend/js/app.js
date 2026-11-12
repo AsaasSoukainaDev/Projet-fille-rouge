@@ -38,12 +38,16 @@ let _ongletActif = 'dashboard';
  *
  * @param {string} id - Identifiant de l'onglet ('dashboard' | 'themes' | 'sessions')
  */
-function changerOnglet(id) {
+function changerOnglet(id, modeHistorique = 'push') {
     if (!ONGLETS[id]) return;
     _ongletActif = id;
 
-    // Masquer tous les contenus
-    document.querySelectorAll('.tab-content').forEach(s => s.classList.remove('active'));
+    // Afficher uniquement le contenu de la fonctionnalité sélectionnée
+    document.querySelectorAll('.tab-content').forEach(section => {
+        const estActive = section.id === `tab-${id}`;
+        section.classList.toggle('active', estActive);
+        section.classList.toggle('hidden', !estActive);
+    });
 
     // Afficher le contenu cible
     const cible = document.getElementById(`tab-${id}`);
@@ -68,8 +72,14 @@ function changerOnglet(id) {
     if (headerTitre)     headerTitre.textContent     = info.titre;
     if (headerSousTitre) headerSousTitre.textContent = info.sousTitre;
 
-    // Synchroniser l'URL avec le hash (navigation navigateur)
-    history.replaceState(null, '', `#${id}`);
+    // Garder l'URL synchronisée sans créer d'entrée lors du retour navigateur
+    if (modeHistorique && window.location.hash !== `#${id}`) {
+        if (modeHistorique === 'replace') {
+            history.replaceState(null, '', `#${id}`);
+        } else {
+            history.pushState(null, '', `#${id}`);
+        }
+    }
 }
 
 // ── Système de toasts ────────────────────────────────────────────────────────
@@ -160,7 +170,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Détecter l'onglet initial via le hash URL (#themes, #sessions, #dashboard)
     const hash = window.location.hash.replace('#', '') || 'dashboard';
     const ongletInitial = ONGLETS[hash] ? hash : 'dashboard';
-    changerOnglet(ongletInitial);
+    changerOnglet(ongletInitial, 'replace');
 
     // Démarrer l'horloge
     _mettreAJourHeure();
@@ -189,6 +199,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Gérer la navigation via le bouton retour du navigateur
     window.addEventListener('popstate', () => {
         const h = window.location.hash.replace('#', '') || 'dashboard';
-        if (ONGLETS[h]) changerOnglet(h);
+        if (ONGLETS[h]) changerOnglet(h, null);
     });
 });

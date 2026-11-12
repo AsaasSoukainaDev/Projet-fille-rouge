@@ -1,5 +1,13 @@
 <?php
 
+require_once __DIR__ . '/../../autoload.php';
+
+use App\DAO\ThemeDAO;
+use App\DAO\SessionDAO;
+use App\Exceptions\AppException;
+use App\Exceptions\ValidationException;
+use App\Services\ThemeService;
+
 /**
  * API REST — Thèmes
  * 
@@ -11,22 +19,19 @@
  *   DELETE /api/themes.php?id=X     → Supprime un thème
  */
 
-// ── En-têtes CORS et contenu JSON ──────────────────────────────────────────
 header('Content-Type: application/json; charset=UTF-8');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
 
-// Répondre aux requêtes de pré-vol OPTIONS (CORS preflight)
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit;
 }
 
-// ── Chargement des dépendances ──────────────────────────────────────────────
-require_once __DIR__ . '/../services/ThemeService.php';
-
-$service = new ThemeService();
+$themeDao = new ThemeDAO(__DIR__ . '/../data/themes.json');
+$sessionDao = new SessionDAO(__DIR__ . '/../data/sessions.json');
+$service = new ThemeService($themeDao, $sessionDao);
 $methode = $_SERVER['REQUEST_METHOD'];
 $id      = isset($_GET['id']) ? (int)$_GET['id'] : null;
 
@@ -37,62 +42,39 @@ try {
         // ── GET : liste ou détail ─────────────────────────────────────────
         case 'GET':
             if ($id !== null) {
-                // Détail d'un thème par ID
-                $theme = $service->trouver($id);
-                if ($theme === null) {
-                    repondre(404, ['erreur' => "Thème #$id introuvable."]);
-                }
-                repondre(200, $theme->toArray());
-            } else {
-                // Liste de tous les thèmes
-                $themes = $service->lister();
-                $data   = array_map(fn($t) => $t->toArray(), $themes);
-                repondre(200, $data);
+                $theme = $service->getById($id);
+                repondre(200, $theme);
             }
+            $themes = $service->getAll();
+            repondre(200, $themes);
             break;
 
-        // ── POST : création ───────────────────────────────────────────────
         case 'POST':
-            $corps = lireCorpsJson();
-            $res   = $service->creer($corps);
-
-            if (!$res['succes']) {
-                repondre(422, ['erreurs' => $res['erreurs']]);
-            }
+            $data = lireCorpsJson();
+            $theme = $service->create($data);
             repondre(201, [
                 'message' => 'Thème créé avec succès.',
-                'theme'   => $res['theme']->toArray(),
+                'theme' => $theme,
             ]);
             break;
 
-        // ── PUT : modification ────────────────────────────────────────────
         case 'PUT':
             if ($id === null) {
                 repondre(400, ['erreur' => 'Paramètre id manquant.']);
             }
-            $corps = lireCorpsJson();
-            $res   = $service->modifier($id, $corps);
-
-            if (!$res['succes']) {
-                $code = str_contains($res['erreurs'][0] ?? '', 'introuvable') ? 404 : 422;
-                repondre($code, ['erreurs' => $res['erreurs']]);
-            }
+            $data = lireCorpsJson();
+            $theme = $service->update($id, $data);
             repondre(200, [
                 'message' => 'Thème modifié avec succès.',
-                'theme'   => $res['theme']->toArray(),
+                'theme' => $theme,
             ]);
             break;
 
-        // ── DELETE : suppression ──────────────────────────────────────────
         case 'DELETE':
             if ($id === null) {
                 repondre(400, ['erreur' => 'Paramètre id manquant.']);
             }
-            $res = $service->supprimer($id);
-
-            if (!$res['succes']) {
-                repondre(404, ['erreurs' => $res['erreurs']]);
-            }
+            $service->delete($id);
             repondre(200, ['message' => "Thème #$id supprimé avec succès."]);
             break;
 
@@ -101,8 +83,11 @@ try {
             repondre(405, ['erreur' => "Méthode HTTP '$methode' non supportée."]);
     }
 
-} catch (Throwable $e) {
-    // Erreur serveur inattendue
+} catch (ValidationException $e) {
+    repondre(422, ['erreurs' => $e->getErrors()]);
+} catch (AppException $e) {
+    repondre($e->getCode(), ['erreur' => $e->getMessage()]);
+} catch (\Throwable $e) {
     repondre(500, ['erreur' => 'Erreur interne : ' . $e->getMessage()]);
 }
 

@@ -1,214 +1,151 @@
 <?php
 
-require_once __DIR__ . '/../dao/SessionDAO.php';
-require_once __DIR__ . '/../dao/ThemeDAO.php';
-require_once __DIR__ . '/../models/Session.php';
+declare(strict_types=1);
+
+namespace App\Services;
+
+use App\DAO\ThemeDAO;
+use App\Exceptions\{ValidationException, BusinessRuleException};
 
 /**
- * SessionService — Couche métier pour la gestion des sessions de webinaires
- * 
- * Responsabilités :
- *  - Validation des données entrantes (règles spécifiques aux sessions)
- *  - Orchestration des opérations via SessionDAO
- *  - Vérification de l'existence du thème associé
- *  - Aucun accès direct aux fichiers (délégué au DAO)
+ * Service métier pour l'entité Session.
+ *
+ * Règles de validation :
+ *  - titre        : obligatoire, 2–200 caractères
+ *  - description  : obligatoire, non vide
+ *  - date_session : obligatoire, format YYYY-MM-DD valide
+ *  - heure_debut  : obligatoire, format HH:MM valide
+ *  - duree        : entier entre 1 et 480 (minutes)
+ *  - lien_visio   : obligatoire, URL commençant par http:// ou https://
+ *  - id_theme     : entier > 0, doit référencer un thème existant
  */
-class SessionService
+class SessionService extends BaseService
 {
-    private SessionDAO $dao;
-    private ThemeDAO   $themeDao;
+    // ── Dépendance vers ThemeDAO (pour vérifier l'existence du thème) ─────────
 
-    public function __construct()
-    {
-        $this->dao      = new SessionDAO();
-        $this->themeDao = new ThemeDAO();
-    }
+    private ThemeDAO $themeDao;
 
-    // -------------------------------------------------------------------------
-    // Validation
-    // -------------------------------------------------------------------------
+    // ── Constructeur ──────────────────────────────────────────────────────────
 
     /**
-     * Valide les données d'une session de webinaire.
-     *
-     * @param array $data Données brutes
-     * @return array Tableau d'erreurs (vide si valide)
+     * @param \App\DAO\SessionDAO $sessionDao DAO des sessions
+     * @param ThemeDAO            $themeDao   DAO des thèmes (vérification id_theme)
      */
-    public function valider(array $data): array
+    public function __construct(\App\DAO\SessionDAO $sessionDao, ThemeDAO $themeDao)
+    {
+        parent::__construct($sessionDao);
+        $this->themeDao = $themeDao;
+    }
+
+    // ── Implémentation des méthodes abstraites ────────────────────────────────
+
+    /**
+     * {@inheritdoc}
+     */
+    protected function getNomRessource(): string
+    {
+        return 'Session';
+    }
+
+    /**
+     * Valide les données d'une session.
+     *
+     * @param  array<string, mixed> $data
+     * @throws ValidationException
+     * @throws BusinessRuleException Si le thème référencé n'existe pas
+     */
+    protected function validate(array $data): void
     {
         $erreurs = [];
 
-        // Titre obligatoire
-        if (empty($data['titre']) || trim($data['titre']) === '') {
+        // ── Titre ─────────────────────────────────────────────────────────────
+        $titre = trim((string)($data['titre'] ?? ''));
+        if ($titre === '') {
             $erreurs[] = 'Le titre est obligatoire.';
-        } elseif (strlen(trim($data['titre'])) > 150) {
-            $erreurs[] = 'Le titre ne doit pas dépasser 150 caractères.';
+        } elseif (strlen($titre) < 2) {
+            $erreurs[] = 'Le titre doit contenir au moins 2 caractères.';
+        } elseif (strlen($titre) > 200) {
+            $erreurs[] = 'Le titre ne peut pas dépasser 200 caractères.';
         }
 
-        // Description obligatoire
-        if (empty($data['description']) || trim($data['description']) === '') {
+        // ── Description ───────────────────────────────────────────────────────
+        $description = trim((string)($data['description'] ?? ''));
+        if ($description === '') {
             $erreurs[] = 'La description est obligatoire.';
         }
 
-        // Date de session obligatoire et valide
-        if (empty($data['date_session'])) {
-            $erreurs[] = 'La date de la session est obligatoire.';
-        } else {
-            $date = \DateTime::createFromFormat('Y-m-d\TH:i', $data['date_session'])
-                 ?: \DateTime::createFromFormat('Y-m-d H:i:s', $data['date_session'])
-                 ?: \DateTime::createFromFormat('Y-m-d H:i', $data['date_session']);
-            if ($date === false) {
-                $erreurs[] = 'Le format de la date est invalide (attendu : YYYY-MM-DDTHH:MM).';
-            }
+        // ── Date de session ───────────────────────────────────────────────────
+        $dateSession = trim((string)($data['date_session'] ?? ''));
+        if ($dateSession === '') {
+            $erreurs[] = 'La date de session est obligatoire.';
+        } elseif (!$this->validerDate($dateSession)) {
+            $erreurs[] = 'La date de session doit être au format YYYY-MM-DD valide.';
         }
 
-        // Durée obligatoire et positive
-        $duree = isset($data['duree_minutes']) ? (int)$data['duree_minutes'] : 0;
-        if ($duree <= 0) {
-            $erreurs[] = 'La durée doit être un entier positif (en minutes).';
-        } elseif ($duree > 480) {
-            $erreurs[] = 'La durée ne peut pas dépasser 480 minutes (8 heures).';
+        // ── Heure de début ────────────────────────────────────────────────────
+        $heureDebut = trim((string)($data['heure_debut'] ?? ''));
+        if ($heureDebut === '') {
+            $erreurs[] = 'L\'heure de début est obligatoire.';
+        } elseif (!$this->validerHeure($heureDebut)) {
+            $erreurs[] = 'L\'heure de début doit être au format HH:MM valide (00:00 – 23:59).';
         }
 
-        // Lien de connexion obligatoire (doit commencer par http:// ou https://)
-        if (empty($data['lien_connexion']) || trim($data['lien_connexion']) === '') {
-            $erreurs[] = 'Le lien de connexion est obligatoire.';
-        } elseif (!preg_match('#^https?://.+#i', trim($data['lien_connexion']))) {
-            $erreurs[] = 'Le lien de connexion doit commencer par http:// ou https://.';
+        // ── Durée ─────────────────────────────────────────────────────────────
+        $duree = (int)($data['duree'] ?? 0);
+        if ($duree < 1 || $duree > 480) {
+            $erreurs[] = 'La durée doit être un entier entre 1 et 480 minutes.';
         }
 
-        // Places max obligatoires et positives
-        $places = isset($data['places_max']) ? (int)$data['places_max'] : 0;
-        if ($places <= 0) {
-            $erreurs[] = 'Le nombre de places doit être un entier positif.';
-        } elseif ($places > 10000) {
-            $erreurs[] = 'Le nombre de places ne peut pas dépasser 10 000.';
+        // ── Lien visio ────────────────────────────────────────────────────────
+        $lienVisio = trim((string)($data['lien_visio'] ?? ''));
+        if ($lienVisio === '') {
+            $erreurs[] = 'Le lien de visioconférence est obligatoire.';
+        } elseif (!preg_match('#^https?://.+#i', $lienVisio)) {
+            $erreurs[] = 'Le lien de visioconférence doit être une URL valide (http:// ou https://).';
         }
 
-        // Statut valide
-        if (empty($data['statut'])) {
-            $erreurs[] = 'Le statut est obligatoire.';
-        } elseif (!in_array($data['statut'], Session::STATUTS_VALIDES, true)) {
-            $erreurs[] = 'Le statut doit être : ' . implode(', ', Session::STATUTS_VALIDES) . '.';
-        }
-
-        // Thème associé obligatoire et existant
-        $idTheme = isset($data['id_theme']) ? (int)$data['id_theme'] : 0;
+        // ── Identifiant du thème ───────────────────────────────────────────────
+        $idTheme = (int)($data['id_theme'] ?? 0);
         if ($idTheme <= 0) {
             $erreurs[] = 'Un thème doit être sélectionné.';
-        } else {
-            $theme = $this->themeDao->findById($idTheme);
-            if ($theme === null) {
-                $erreurs[] = "Le thème #$idTheme n'existe pas.";
-            }
         }
 
-        return $erreurs;
-    }
-
-    // -------------------------------------------------------------------------
-    // CRUD
-    // -------------------------------------------------------------------------
-
-    /**
-     * Crée une nouvelle session après validation.
-     *
-     * @param array $data Données brutes
-     * @return array ['succes' => bool, 'erreurs' => [], 'session' => Session|null]
-     */
-    public function creer(array $data): array
-    {
-        $erreurs = $this->valider($data);
+        // Si des erreurs de format, on les remonte avant la vérification BDD
         if (!empty($erreurs)) {
-            return ['succes' => false, 'erreurs' => $erreurs, 'session' => null];
+            throw new ValidationException($erreurs);
         }
 
-        $session = new Session(
-            0,
-            trim($data['titre']),
-            trim($data['description']),
-            trim($data['date_session']),
-            (int)$data['duree_minutes'],
-            trim($data['lien_connexion']),
-            (int)$data['places_max'],
-            $data['statut'],
-            (int)$data['id_theme']
-        );
+        // Vérifier que le thème existe réellement (règle métier, pas de validation)
+        if ($this->themeDao->findById($idTheme) === null) {
+            throw new BusinessRuleException(
+                sprintf('Le thème avec l\'identifiant %d n\'existe pas.', $idTheme)
+            );
+        }
+    }
 
-        $session = $this->dao->save($session);
+    // ── Méthodes de validation de format privées ──────────────────────────────
 
-        return ['succes' => true, 'erreurs' => [], 'session' => $session];
+    /**
+     * Vérifie que la chaîne est une date valide au format YYYY-MM-DD.
+     */
+    private function validerDate(string $date): bool
+    {
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+            return false;
+        }
+        [$annee, $mois, $jour] = explode('-', $date);
+        return checkdate((int)$mois, (int)$jour, (int)$annee);
     }
 
     /**
-     * Modifie une session existante.
-     *
-     * @param int   $id   Identifiant de la session
-     * @param array $data Nouvelles données
-     * @return array ['succes' => bool, 'erreurs' => [], 'session' => Session|null]
+     * Vérifie que la chaîne est une heure valide au format HH:MM (00:00 – 23:59).
      */
-    public function modifier(int $id, array $data): array
+    private function validerHeure(string $heure): bool
     {
-        // Vérifier que la session existe
-        $session = $this->dao->findById($id);
-        if ($session === null) {
-            return ['succes' => false, 'erreurs' => ["Session #$id introuvable."], 'session' => null];
+        if (!preg_match('/^\d{2}:\d{2}$/', $heure)) {
+            return false;
         }
-
-        $erreurs = $this->valider($data);
-        if (!empty($erreurs)) {
-            return ['succes' => false, 'erreurs' => $erreurs, 'session' => null];
-        }
-
-        $session->setTitre(trim($data['titre']));
-        $session->setDescription(trim($data['description']));
-        $session->setDateSession(trim($data['date_session']));
-        $session->setDureeMinutes((int)$data['duree_minutes']);
-        $session->setLienConnexion(trim($data['lien_connexion']));
-        $session->setPlacesMax((int)$data['places_max']);
-        $session->setStatut($data['statut']);
-        $session->setIdTheme((int)$data['id_theme']);
-
-        $succes = $this->dao->update($session);
-
-        return ['succes' => $succes, 'erreurs' => [], 'session' => $session];
-    }
-
-    /**
-     * Supprime une session par son identifiant.
-     *
-     * @param int $id Identifiant de la session
-     * @return array ['succes' => bool, 'erreurs' => []]
-     */
-    public function supprimer(int $id): array
-    {
-        $session = $this->dao->findById($id);
-        if ($session === null) {
-            return ['succes' => false, 'erreurs' => ["Session #$id introuvable."]];
-        }
-
-        $succes = $this->dao->delete($id);
-        return ['succes' => $succes, 'erreurs' => []];
-    }
-
-    /**
-     * Retourne toutes les sessions.
-     *
-     * @return Session[]
-     */
-    public function lister(): array
-    {
-        return $this->dao->findAll();
-    }
-
-    /**
-     * Retourne une session par son identifiant.
-     *
-     * @param int $id Identifiant de la session
-     * @return Session|null
-     */
-    public function trouver(int $id): ?Session
-    {
-        return $this->dao->findById($id);
+        [$h, $m] = explode(':', $heure);
+        return (int)$h >= 0 && (int)$h <= 23 && (int)$m >= 0 && (int)$m <= 59;
     }
 }

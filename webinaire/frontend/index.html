@@ -5,24 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>WebinairePro — Plateforme d'administration</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        /* Transitions d'onglets */
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-
-        /* Scrollbar fine pour la sidebar */
-        .sidebar-scroll::-webkit-scrollbar { width: 4px; }
-        .sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
-        .sidebar-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
-
-        /* Animation des lignes de tableau */
-        tbody tr { transition: background-color 0.1s ease; }
-
-        /* Focus ring global */
-        *:focus-visible { outline: none; }
-    </style>
 </head>
-<body class="bg-gray-50 font-sans">
+<body class="bg-slate-50 font-sans text-slate-800">
 <div class="flex h-screen overflow-hidden">
 
     <!-- ═══════════════════════════════════════════════════════════════════
@@ -226,10 +210,20 @@
             <!-- ─────────────────────────────────────────────────────────
                  ONGLET : THÈMES
             ──────────────────────────────────────────────────────────── -->
-            <section id="tab-themes" class="tab-content">
+            <section id="tab-themes" class="tab-content hidden">
+
+                <div class="flex justify-end mb-4">
+                    <button type="button" id="btn-theme-nouveau"
+                        class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+                        </svg>
+                        Créer un thème
+                    </button>
+                </div>
 
                 <!-- Formulaire -->
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+                <div id="theme-form-panel" class="hidden bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
                     <h2 id="form-theme-titre" class="text-base font-semibold text-slate-900 mb-5">Nouveau thème</h2>
 
                     <form id="form-theme" novalidate>
@@ -294,7 +288,6 @@
                         <table class="w-full">
                             <thead class="bg-slate-50 border-b border-slate-200">
                                 <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider w-16">ID</th>
                                     <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Libellé</th>
                                     <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Description</th>
                                     <th class="px-6 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider w-28">Actions</th>
@@ -302,7 +295,7 @@
                             </thead>
                             <tbody id="tbody-themes" class="divide-y divide-slate-100">
                                 <tr>
-                                    <td colspan="4" class="px-6 py-10 text-center text-slate-400 text-sm">Chargement…</td>
+                                    <td colspan="3" class="px-6 py-10 text-center text-slate-400 text-sm">Chargement…</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -313,10 +306,20 @@
             <!-- ─────────────────────────────────────────────────────────
                  ONGLET : SESSIONS
             ──────────────────────────────────────────────────────────── -->
-            <section id="tab-sessions" class="tab-content">
+            <section id="tab-sessions" class="tab-content hidden">
+
+                <div class="flex justify-end mb-4">
+                    <button type="button" id="btn-session-nouveau"
+                        class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+                        </svg>
+                        Créer une session
+                    </button>
+                </div>
 
                 <!-- Formulaire -->
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+                <div id="session-form-panel" class="hidden bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
                     <h2 id="form-session-titre" class="text-base font-semibold text-slate-900 mb-5">Nouvelle session</h2>
 
                     <form id="form-session" novalidate>
@@ -442,7 +445,6 @@
                         <table class="w-full">
                             <thead class="bg-slate-50 border-b border-slate-200">
                                 <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider w-12">ID</th>
                                     <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Titre</th>
                                     <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Date</th>
                                     <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Durée</th>
@@ -452,7 +454,7 @@
                             </thead>
                             <tbody id="tbody-sessions" class="divide-y divide-slate-100">
                                 <tr>
-                                    <td colspan="6" class="px-6 py-10 text-center text-slate-400 text-sm">Chargement…</td>
+                                    <td colspan="5" class="px-6 py-10 text-center text-slate-400 text-sm">Chargement…</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -474,7 +476,7 @@
 ════════════════════════════════════════════════════════════════════ -->
 <script src="./js/api.js"></script>
 <script src="./js/themes.js"></script>
-<script src="./js/sessions.js"></script>
+<script src="./js/sessions.js?v=2"></script>
 <script src="./js/app.js"></script>
 
 </body>

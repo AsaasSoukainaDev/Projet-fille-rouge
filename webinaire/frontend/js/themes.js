@@ -11,6 +11,8 @@
 
 // ── Références DOM ───────────────────────────────────────────────────────────
 const _formTheme       = () => document.getElementById('form-theme');
+const _themeFormPanel  = () => document.getElementById('theme-form-panel');
+const _btnThemeNouveau = () => document.getElementById('btn-theme-nouveau');
 const _tbodyThemes     = () => document.getElementById('tbody-themes');
 const _compteurThemes  = () => document.getElementById('compteur-themes');
 const _badgeThemes     = () => document.getElementById('badge-themes');
@@ -55,7 +57,7 @@ function _afficherThemes(themes) {
     if (themes.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="4" class="px-6 py-12 text-center">
+                <td colspan="3" class="px-6 py-12 text-center">
                     <div class="flex flex-col items-center gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor" class="w-8 h-8 text-slate-300">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z"/>
@@ -69,15 +71,14 @@ function _afficherThemes(themes) {
 
     tbody.innerHTML = themes.map(t => `
         <tr class="hover:bg-slate-50 transition-colors">
-            <td class="px-6 py-4 text-sm text-slate-400 font-mono">#${t.id_theme}</td>
             <td class="px-6 py-4">
                 <span class="text-sm font-medium text-slate-900">${_esc(t.libelle)}</span>
             </td>
-            <td class="px-6 py-4 text-sm text-slate-600 max-w-xs truncate">${_esc(t.description)}</td>
+            <td class="px-6 py-4 text-sm text-slate-600 max-w-sm whitespace-normal">${_esc(t.description)}</td>
             <td class="px-6 py-4">
                 <div class="flex items-center justify-end gap-1">
                     <!-- Modifier -->
-                    <button onclick="_editerTheme(${t.id_theme})"
+                    <button onclick="_editerTheme(${t.id})"
                         title="Modifier"
                         class="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
@@ -85,7 +86,7 @@ function _afficherThemes(themes) {
                         </svg>
                     </button>
                     <!-- Supprimer -->
-                    <button onclick="_supprimerTheme(${t.id_theme}, '${_esc(t.libelle)}')"
+                    <button onclick="_supprimerTheme(${t.id}, '${_esc(t.libelle)}')"
                         title="Supprimer"
                         class="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
@@ -103,6 +104,12 @@ function _afficherThemes(themes) {
 document.addEventListener('DOMContentLoaded', () => {
     const form = _formTheme();
     if (!form) return;
+
+    _btnThemeNouveau()?.addEventListener('click', () => {
+        _reinitFormTheme();
+        _afficherFormTheme();
+        document.getElementById('theme-libelle')?.focus();
+    });
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -150,6 +157,7 @@ async function _editerTheme(id) {
             </svg>
             Enregistrer`);
         _btnThemeAnnuler()?.classList.remove('hidden');
+        _afficherFormTheme();
 
         // Basculer sur l'onglet Thèmes si besoin, puis scroller
         changerOnglet('themes');
@@ -191,6 +199,14 @@ function _reinitFormTheme() {
         </svg>
         Créer le thème`);
     _btnThemeAnnuler()?.classList.add('hidden');
+    _themeFormPanel()?.classList.add('hidden');
+    _btnThemeNouveau()?.classList.remove('hidden');
+}
+
+function _afficherFormTheme() {
+    _themeFormPanel()?.classList.remove('hidden');
+    _btnThemeNouveau()?.classList.add('hidden');
+    _btnThemeAnnuler()?.classList.remove('hidden');
 }
 
 // ── Utilitaire XSS ───────────────────────────────────────────────────────────

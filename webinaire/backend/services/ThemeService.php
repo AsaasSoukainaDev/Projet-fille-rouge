@@ -1,147 +1,99 @@
 <?php
 
-require_once __DIR__ . '/../dao/ThemeDAO.php';
-require_once __DIR__ . '/../models/Theme.php';
+declare(strict_types=1);
+
+namespace App\Services;
+
+use App\DAO\SessionDAO;
+use App\Exceptions\{BusinessRuleException, ValidationException};
 
 /**
- * ThemeService — Couche métier pour la gestion des thèmes
- * 
- * Responsabilités :
- *  - Validation des données entrantes
- *  - Orchestration des opérations via ThemeDAO
- *  - Aucun accès direct aux fichiers (délégué au DAO)
+ * Service métier pour l'entité Thème.
+ *
+ * Règles de validation :
+ *  - libelle  : obligatoire, non vide, entre 2 et 100 caractères
+ *
+ * Règle métier supplémentaire :
+ *  - Un thème ne peut pas être supprimé s'il contient encore des sessions.
+ *    Cette vérification utilise SessionDAO injecté en dépendance.
  */
-class ThemeService
+class ThemeService extends BaseService
 {
-    private ThemeDAO $dao;
+    // ── Dépendance vers SessionDAO (pour la règle de suppression) ─────────────
 
-    public function __construct()
+    private SessionDAO $sessionDao;
+
+    // ── Constructeur ──────────────────────────────────────────────────────────
+
+    /**
+     * @param \App\DAO\ThemeDAO $themeDao   DAO des thèmes
+     * @param SessionDAO        $sessionDao DAO des sessions (vérification contrainte)
+     */
+    public function __construct(\App\DAO\ThemeDAO $themeDao, SessionDAO $sessionDao)
     {
-        $this->dao = new ThemeDAO();
+        parent::__construct($themeDao);
+        $this->sessionDao = $sessionDao;
     }
 
-    // -------------------------------------------------------------------------
-    // Validation
-    // -------------------------------------------------------------------------
+    // ── Implémentation des méthodes abstraites ────────────────────────────────
+
+    /**
+     * {@inheritdoc}
+     */
+    protected function getNomRessource(): string
+    {
+        return 'Thème';
+    }
 
     /**
      * Valide les données d'un thème.
      *
-     * @param array $data Données brutes
-     * @return array Tableau d'erreurs (vide si valide)
+     * @param  array<string, mixed> $data
+     * @throws ValidationException
      */
-    public function valider(array $data): array
+    protected function validate(array $data): void
     {
         $erreurs = [];
 
-        // Libellé obligatoire et non vide
-        if (empty($data['libelle']) || trim($data['libelle']) === '') {
+        // ── Libellé ───────────────────────────────────────────────────────────
+        $libelle = trim((string)($data['libelle'] ?? ''));
+
+        if ($libelle === '') {
             $erreurs[] = 'Le libellé est obligatoire.';
-        } elseif (strlen(trim($data['libelle'])) > 100) {
-            $erreurs[] = 'Le libellé ne doit pas dépasser 100 caractères.';
+        } elseif (strlen($libelle) < 2) {
+            $erreurs[] = 'Le libellé doit contenir au moins 2 caractères.';
+        } elseif (strlen($libelle) > 100) {
+            $erreurs[] = 'Le libellé ne peut pas dépasser 100 caractères.';
         }
 
-        // Description obligatoire
-        if (empty($data['description']) || trim($data['description']) === '') {
-            $erreurs[] = 'La description est obligatoire.';
-        } elseif (strlen(trim($data['description'])) > 500) {
-            $erreurs[] = 'La description ne doit pas dépasser 500 caractères.';
-        }
-
-        return $erreurs;
-    }
-
-    // -------------------------------------------------------------------------
-    // CRUD
-    // -------------------------------------------------------------------------
-
-    /**
-     * Crée un nouveau thème après validation.
-     *
-     * @param array $data Données brutes
-     * @return array ['succes' => bool, 'erreurs' => [], 'theme' => Theme|null]
-     */
-    public function creer(array $data): array
-    {
-        $erreurs = $this->valider($data);
         if (!empty($erreurs)) {
-            return ['succes' => false, 'erreurs' => $erreurs, 'theme' => null];
+            throw new ValidationException($erreurs);
         }
-
-        $theme = new Theme(
-            0,
-            trim($data['libelle']),
-            trim($data['description'])
-        );
-
-        $theme = $this->dao->save($theme);
-
-        return ['succes' => true, 'erreurs' => [], 'theme' => $theme];
     }
 
+    // ── Surcharge de delete avec règle métier ──────────────────────────────────
+
     /**
-     * Modifie un thème existant.
+     * Supprime un thème uniquement s'il ne possède aucune session associée.
      *
-     * @param int   $id   Identifiant du thème
-     * @param array $data Nouvelles données
-     * @return array ['succes' => bool, 'erreurs' => [], 'theme' => Theme|null]
+     * @param  int  $id
+     * @throws BusinessRuleException Si des sessions sont encore liées à ce thème
+     * @throws \App\Exceptions\NotFoundException
      */
-    public function modifier(int $id, array $data): array
+    public function delete(int $id): void
     {
-        // Vérifier que le thème existe
-        $theme = $this->dao->findById($id);
-        if ($theme === null) {
-            return ['succes' => false, 'erreurs' => ["Thème #$id introuvable."], 'theme' => null];
+        // Vérifier l'existence du thème
+        $this->getById($id);
+
+        // Vérifier qu'aucune session n'est liée
+        $sessionsLiees = $this->sessionDao->findByThemeId($id);
+        if (!empty($sessionsLiees)) {
+            throw new BusinessRuleException(sprintf(
+                'Impossible de supprimer ce thème : %d session(s) lui sont encore associée(s).',
+                count($sessionsLiees)
+            ));
         }
 
-        $erreurs = $this->valider($data);
-        if (!empty($erreurs)) {
-            return ['succes' => false, 'erreurs' => $erreurs, 'theme' => null];
-        }
-
-        $theme->setLibelle(trim($data['libelle']));
-        $theme->setDescription(trim($data['description']));
-
-        $succes = $this->dao->update($theme);
-
-        return ['succes' => $succes, 'erreurs' => [], 'theme' => $theme];
-    }
-
-    /**
-     * Supprime un thème par son identifiant.
-     *
-     * @param int $id Identifiant du thème
-     * @return array ['succes' => bool, 'erreurs' => []]
-     */
-    public function supprimer(int $id): array
-    {
-        $theme = $this->dao->findById($id);
-        if ($theme === null) {
-            return ['succes' => false, 'erreurs' => ["Thème #$id introuvable."]];
-        }
-
-        $succes = $this->dao->delete($id);
-        return ['succes' => $succes, 'erreurs' => []];
-    }
-
-    /**
-     * Retourne tous les thèmes.
-     *
-     * @return Theme[]
-     */
-    public function lister(): array
-    {
-        return $this->dao->findAll();
-    }
-
-    /**
-     * Retourne un thème par son identifiant.
-     *
-     * @param int $id Identifiant du thème
-     * @return Theme|null
-     */
-    public function trouver(int $id): ?Theme
-    {
-        return $this->dao->findById($id);
+        parent::delete($id);
     }
 }

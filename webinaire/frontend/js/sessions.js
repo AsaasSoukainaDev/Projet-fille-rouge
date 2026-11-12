@@ -22,6 +22,8 @@ let _themesCache = {};
 
 // ── Références DOM ───────────────────────────────────────────────────────────
 const _formSession       = () => document.getElementById('form-session');
+const _sessionFormPanel  = () => document.getElementById('session-form-panel');
+const _btnSessionNouveau = () => document.getElementById('btn-session-nouveau');
 const _tbodySessions     = () => document.getElementById('tbody-sessions');
 const _compteurSessions  = () => document.getElementById('compteur-sessions');
 const _badgeSessions     = () => document.getElementById('badge-sessions');
@@ -62,7 +64,7 @@ async function chargerThemesPourSelect() {
         const themes = await apiGet('themes');
         // Mettre à jour le cache nom → libellé
         _themesCache = {};
-        themes.forEach(t => { _themesCache[t.id_theme] = t.libelle; });
+        themes.forEach(t => { _themesCache[t.id] = t.libelle; });
 
         const sel = _selectTheme();
         if (!sel) return;
@@ -70,7 +72,7 @@ async function chargerThemesPourSelect() {
         sel.innerHTML = `<option value="">— Sélectionner un thème —</option>`;
         themes.forEach(t => {
             const opt = document.createElement('option');
-            opt.value = t.id_theme;
+            opt.value = t.id;
             opt.textContent = t.libelle;
             sel.appendChild(opt);
         });
@@ -97,7 +99,7 @@ function _afficherSessions(sessions) {
     if (sessions.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="6" class="px-6 py-12 text-center">
+                <td colspan="5" class="px-6 py-12 text-center">
                     <div class="flex flex-col items-center gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor" class="w-8 h-8 text-slate-300">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5"/>
@@ -121,7 +123,6 @@ function _afficherSessions(sessions) {
 
         return `
         <tr class="hover:bg-slate-50 transition-colors">
-            <td class="px-6 py-4 text-sm text-slate-400 font-mono">#${s.id_session}</td>
             <td class="px-6 py-4">
                 <div>
                     <p class="text-sm font-medium text-slate-900 truncate max-w-[200px]">${_escSess(s.titre)}</p>
@@ -129,7 +130,7 @@ function _afficherSessions(sessions) {
                 </div>
             </td>
             <td class="px-6 py-4 text-sm text-slate-600 whitespace-nowrap">${dateStr}</td>
-            <td class="px-6 py-4 text-sm text-slate-600">${s.duree_minutes} min</td>
+            <td class="px-6 py-4 text-sm text-slate-600">${s.duree} min</td>
             <td class="px-6 py-4">
                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${badgeCss}">
                     ${_escSess(s.statut)}
@@ -138,7 +139,7 @@ function _afficherSessions(sessions) {
             <td class="px-6 py-4">
                 <div class="flex items-center justify-end gap-1">
                     <!-- Modifier -->
-                    <button onclick="_editerSession(${s.id_session})"
+                    <button onclick="_editerSession(${s.id})"
                         title="Modifier"
                         class="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
@@ -146,7 +147,7 @@ function _afficherSessions(sessions) {
                         </svg>
                     </button>
                     <!-- Supprimer -->
-                    <button onclick="_supprimerSession(${s.id_session}, '${_escSess(s.titre)}')"
+                    <button onclick="_supprimerSession(${s.id}, '${_escSess(s.titre)}')"
                         title="Supprimer"
                         class="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
@@ -197,7 +198,7 @@ function _mettreAJourDashboard(sessions) {
         <tr class="hover:bg-slate-50 transition-colors">
             <td class="px-6 py-4 text-sm font-medium text-slate-900">${_escSess(s.titre)}</td>
             <td class="px-6 py-4 text-sm text-slate-600 whitespace-nowrap">${dateStr}</td>
-            <td class="px-6 py-4 text-sm text-slate-600">${s.duree_minutes} min</td>
+            <td class="px-6 py-4 text-sm text-slate-600">${s.duree} min</td>
             <td class="px-6 py-4">
                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${badgeCss}">
                     ${_escSess(s.statut)}
@@ -213,13 +214,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const form = _formSession();
     if (!form) return;
 
+    _btnSessionNouveau()?.addEventListener('click', () => {
+        _reinitFormSession();
+        _afficherFormSession();
+        document.getElementById('session-titre')?.focus();
+    });
+
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const data = {
             titre:          document.getElementById('session-titre').value.trim(),
             description:    document.getElementById('session-description').value.trim(),
             date_session:   document.getElementById('session-date').value,
-            duree_minutes:  parseInt(document.getElementById('session-duree').value, 10) || 0,
+            duree:          parseInt(document.getElementById('session-duree').value, 10) || 0,
             lien_connexion: document.getElementById('session-lien').value.trim(),
             places_max:     parseInt(document.getElementById('session-places').value, 10) || 0,
             statut:         document.getElementById('session-statut').value,
@@ -254,7 +261,7 @@ async function _editerSession(id) {
         document.getElementById('session-titre').value       = s.titre;
         document.getElementById('session-description').value = s.description;
         document.getElementById('session-date').value        = s.date_session ? s.date_session.substring(0, 16) : '';
-        document.getElementById('session-duree').value       = s.duree_minutes;
+        document.getElementById('session-duree').value       = s.duree;
         document.getElementById('session-lien').value        = s.lien_connexion;
         document.getElementById('session-places').value      = s.places_max;
         document.getElementById('session-statut').value      = s.statut;
@@ -267,6 +274,7 @@ async function _editerSession(id) {
             </svg>
             Enregistrer`);
         _btnSessionAnnuler()?.classList.remove('hidden');
+            _afficherFormSession();
 
         changerOnglet('sessions');
         document.getElementById('form-session')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -302,6 +310,14 @@ function _reinitFormSession() {
         </svg>
         Créer la session`);
     _btnSessionAnnuler()?.classList.add('hidden');
+    _sessionFormPanel()?.classList.add('hidden');
+    _btnSessionNouveau()?.classList.remove('hidden');
+}
+
+function _afficherFormSession() {
+    _sessionFormPanel()?.classList.remove('hidden');
+    _btnSessionNouveau()?.classList.add('hidden');
+    _btnSessionAnnuler()?.classList.remove('hidden');
 }
 
 // ── Utilitaire XSS ───────────────────────────────────────────────────────────
